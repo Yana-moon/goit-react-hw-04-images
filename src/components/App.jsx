@@ -1,4 +1,5 @@
-import { Component } from 'react';
+//import { Component } from 'react';
+import { useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Searchbar } from './Searchbar/Searchbar';
@@ -8,27 +9,37 @@ import { resultSearch } from './Api/Api';
 import { Modal } from './Modal/Modal';
 import { Button } from './Button/Button';
 import { Loader } from './Loader/Loader';
+import { useEffect } from 'react';
 
-export class App extends Component {
-  state = {
-    searchName: '',
-    pictures: [],
-    currentPage: 1,
-    per_page: 12,
-    isOpen: false,
-    largeImage: '',
-    isLoading: false,
-  };
+//export class App extends Component {
+  //state = {
+   // searchName: '',
+   // pictures: [],
+   // currentPage: 1,
+    //per_page: 12,
+    //isOpen: false,
+    //largeImage: '',
+    //isLoading: false,
+  //};
 
-  async componentDidUpdate (_prevProps, prevState) {
+  export const App = () => {
+    const [searchName, setSearchName] = useState('');
+    const [pictures, setPictures] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [per_page] = useState(12);
+    const [isOpen, setIsOpen] = useState(false);
+    const [largeImage, setLargeImage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
     const options = {
-      searchName: this.state.searchName,
-      currentPage: this.state.currentPage,
+      searchName: searchName,
+      currentPage: currentPage,
     };
+
     if (
-      prevState.searchName !== this.state.searchName &&
-      this.state.searchName
-    ) {
+      searchName  || currentPage !== 1) {
+      async function getImages() {
       try {
         const response = await resultSearch(options);
         const arr = response.hits.map(el => ({
@@ -39,109 +50,70 @@ export class App extends Component {
         }));
 
         if (arr && arr.length > 0) {
-          this.setState({
-            pictures: arr,
-            isLoading: false,
-          });
+            setPictures ( prev => [...prev,  ...arr]);
+            setIsLoading(false);
         }
         if (arr.length === 0) {
-          this.setState({
-            isLoading: false,
-          });
+            setIsLoading(false);
           return toast.error(
             `Sorry, we didn't find picture including such name. Please try again.`,
           );
         }
       } catch (error) {
-        this.setState({
-          isLoading: false,
-        });
+        setIsLoading(false);
         toast.error(
           'Sorry, something wrong. Try again later', error);
       }
     }
+  
+  getImages();
+}
+}, [searchName, currentPage]);
 
-
-    if (prevState.currentPage !== this.state.currentPage && this.state.currentPage !== 1) {
-      try {
-        const response = await resultSearch(options);
-        const arr = response.hits.map(el => ({
-          tags: el.tags,
-          webformatURL: el.webformatURL,
-          largeImageURL: el.largeImageURL,
-          id: el.id,
-        }));
-        this.setState({
-          pictures: [...this.state.pictures, ...arr],
-          isLoading: false,
-        });
-      } catch (error) {
-        this.setState({
-          isLoading: false,
-        });
-        return toast.warn(
-          'Sorry, something went wrong, please try again later', error
-        );
-      }
-    }
-  }
-
-  handleSubmit = ({ name }) => {
-    if (name !== this.state.searchName && name) {
-      this.setState({
-        searchName: name,
-        currentPage: 1,
-        pictures: [],
-        isLoading: true,
-      });
+const  handleSubmit =  name  => {
+    if (name !== searchName && name) {
+        setSearchName(name);
+        setCurrentPage(1);
+        setPictures([]);
+        setIsLoading(true);
     }
   };
 
-  handleBigImg = img => {
-    this.setState({
-      largeImage: img,
-      isOpen: true,
-    });
+  const handleBigImg = img => {
+      setLargeImage(img);
+      setIsOpen(true);
   };
 
-  onClose = () => {
-    this.setState({
-      isOpen: false,
-    });
+  const onClose = () => {
+      setIsOpen(false);
   };
 
-  loadMoreCards = () => {
-    this.setState(prev => ({
-      currentPage: prev.currentPage + 1,
-      isLoading: true,
-    }));
+  const loadMoreCards = () => {
+    setCurrentPage(prev => prev +1);
+    setIsLoading(true);
   };
 
-  onButtonVisible = () => {
-    if (
-      this.state.pictures &&
-      this.state.pictures.length < Number(this.state.currentPage * this.state.per_page)
+  const onButtonVisible = () => {
+    if (pictures && pictures.length < Number(currentPage * per_page)
     ) {
       return false;
     } else return true;
   };
-
-  render() {
-    return (
+  
+  return (
       <AppWrapper>
         <ToastContainer autoClose={2500} />
-        <Searchbar onSubmit={this.handleSubmit} />
-        <ImageGallery pictures={this.state.pictures}
-        onBigImg={this.handleBigImg} />
-                {this.state.isOpen && (
-          <Modal largeImage={this.state.largeImage} onClose={this.onClose} />
-        )}
-        {this.onButtonVisible() && (
-          <Button onClickButton={this.loadMoreCards} />
-        )}
-        {this.state.isLoading && <Loader />}
+        <Searchbar onSubmit={handleSubmit} />
+        <ImageGallery pictures={pictures} onBigImg={handleBigImg} />
+                {isOpen && 
+          <Modal largeImage={largeImage} onClose={onClose} />
+        }
+        {onButtonVisible() && 
+          <Button onClickButton={loadMoreCards} />
+        }
+        {isLoading && <Loader />}
       </AppWrapper>
     );
-  }
-}
+        };
+
 
